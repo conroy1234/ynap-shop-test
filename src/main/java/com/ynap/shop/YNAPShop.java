@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.ynap.shop.model.Product;
 import com.ynap.shop.service.ProductService;
@@ -21,6 +22,7 @@ public class YNAPShop {
 	 */
 	public void loadProducts() throws IOException {
 		List<String> fileData = productService.loadProducts();
+
 		System.out.println(fileData);
 	}
 
@@ -55,7 +57,7 @@ public class YNAPShop {
 
 		productList.add(productId);
 		List<Product> basket = Arrays.asList(new Product(productList.get(5), productList.get(1), productList.get(2)));
-		System.out.println(basket.get(0));
+		System.out.println(" product added to basket " + basket);
 	}
 
 	/**
@@ -75,6 +77,7 @@ public class YNAPShop {
 
 	/**
 	 * Remove a product from the Basket
+	 * 
 	 * @throws IOException
 	 */
 	public void removeProductFromBasket(String productId) throws IOException {
@@ -89,40 +92,26 @@ public class YNAPShop {
 	 * @throws IOException
 	 */
 	public BigDecimal getTotal() throws IOException {
-		List<String> productList = productService.loadProducts();
+		/*
+		 * extract all the values from the file and split them into comma separated
+		 * array replace all pound sign remove all alfabetical charactors remove the
+		 * integer count 1 to seven
+		 */
+		List<String> totalAsListOfStrings = productService.loadProducts().stream().filter(s -> s.contains("."))
+				.map(s -> s.replace("£", "")).map(s -> s.replaceAll("[^\\d.]", "")).map(s -> s.substring(1))
+				.collect(Collectors.toList());
 
-		// extract all the values from the file and split them into comma separated
-		// array
-		String intLines[][] = { ShopUtil.splitter(productList.get(1)), ShopUtil.splitter(productList.get(2)),
-				ShopUtil.splitter(productList.get(3)), ShopUtil.splitter(productList.get(4)),
-				ShopUtil.splitter(productList.get(5)), ShopUtil.splitter(productList.get(6)),
-				ShopUtil.splitter(productList.get(7)) };
+		// convert the list of strings to a list of doubles
 
-		// extract all the cost and into a separate array
-		String digitExtracter[] = { intLines[0][2], intLines[1][2], intLines[2][2], intLines[3][2], intLines[4][2],
-				intLines[5][2], intLines[6][2] };
+		List<Double> totalAslistOfDoubles = ShopUtil.convertStringListToIntList(totalAsListOfStrings,
+				Double::parseDouble);
 
-		// remove the pound sign so that the values can be calculated
-		String replacingArray[] = { ShopUtil.replacing(digitExtracter[0], "£", ""),
-				ShopUtil.replacing(digitExtracter[1], "£", ""), ShopUtil.replacing(digitExtracter[2], "£", ""),
-				ShopUtil.replacing(digitExtracter[3], "£", ""), ShopUtil.replacing(digitExtracter[4], "£", ""),
-				ShopUtil.replacing(digitExtracter[5], "£", ""), ShopUtil.replacing(digitExtracter[6], "£", "") };
+		// calculate the total
+		double total = totalAslistOfDoubles.stream().mapToDouble(Double::doubleValue).sum();
+		// return the total with only 2 decimol places
 
-		// place all the double values into a double array ready to sum all the values
-		double totalValue[] = { Double.parseDouble(replacingArray[0]), Double.parseDouble(replacingArray[1]),
-				Double.parseDouble(replacingArray[2]), Double.parseDouble(replacingArray[3]),
-				Double.parseDouble(replacingArray[4]), Double.parseDouble(replacingArray[5]),
-				Double.parseDouble(replacingArray[6]) };
+		return BigDecimal.valueOf(ShopUtil.round(total, 2));
 
-		// loop through the total value array and add the values to sum
-		for (double result : totalValue) {
-			sum += result;
-
-		}
-		double total = ShopUtil.round(sum, 2);
-		System.out.println(" total :" + total);
-
-		return BigDecimal.valueOf(total);
 	}
 
 }
